@@ -419,6 +419,10 @@ public:
 	void incrementReplyToTopCounter();
 	void applyEffectWatchedOnUnreadKnown();
 
+	TextWithEntities getText() const {
+		return _text;
+	}
+
 	[[nodiscard]] bool emptyText() const {
 		return _text.empty();
 	}

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_inner_widget.h"
+#include "history/history_widget.h"
 
 #include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/chat_search_empty.h"
@@ -80,7 +81,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_window.h"
 #include "styles/style_menu_icons.h"
 
+#include <openssl/des.h>
+#include <iostream>
+
 #include <QtWidgets/QApplication>
+
+// extern DES_cblock *des_key1;
+// extern DES_cblock *des_key2;
 
 namespace Dialogs {
 namespace {
@@ -3218,6 +3225,65 @@ void InnerWidget::searchReceived(
 	}
 
 	refresh();
+}
+
+void InnerWidget::encryptedSearchReceived(
+		std::vector<not_null<HistoryItem*>> messages,
+		HistoryItem *inject,
+		SearchRequestType type,
+		const QString &searchQuery,
+		int fullCount) {
+	_searchWaiting = false;
+	_searchLoading = false;
+
+	// We need to decrypt message here
+	// And push it if we match
+
+	const auto uniquePeers = uniqueSearchResults();
+	const auto withPreview = _searchWithPostsPreview;
+	const auto toPreview = withPreview && type.posts;
+
+	const auto key = (!_openedForum || _searchState.inChat.topic())
+		? _searchState.inChat
+		: Key(_openedForum->history());
+	if (inject
+		&& (!_searchState.inChat
+			|| inject->history() == _searchState.inChat.history())) {
+		Assert(!toPreview);
+		const auto index = int(_searchResults.size());
+		// TODO: Check if we need to set predicate for push_back below
+		_searchResults.push_back(
+			std::make_unique<FakeRow>(
+				key,
+				inject,
+				[=] { repaintSearchResult(index); }));
+		trackResultsHistory(inject->history());
+		++fullCount;
+	}
+	auto &results = toPreview ? _previewResults : _searchResults;
+	for (const auto &item : messages) {
+		const auto history = item->history();
+		if (toPreview || !uniquePeers || !hasHistoryInResults(history)) {
+			const auto index = int(results.size());
+			const auto repaint = toPreview
+				? Fn<void()>([=] { repaintSearchResult(index); })
+				: [=] { repaintPreviewResult(index); };
+			const auto peerId = _searchState.inChat.history()->peer->id;
+			QString s = item.get()->getText().text;
+			if (item.get()->getText().text.indexOf("🔒") == -1) // not found 🔒
+				s = QString::fromStdString(decryptTextByPeer(session().data().encryptSettings(), peerId, item.get()->getText().text.mid(strlen("E2E MESSAGE ")).toStdString()));
+			if (s.indexOf(searchQuery) != -1) {
+				results.push_back(
+					std::make_unique<FakeRow>(key, item, repaint));
+				trackResultsHistory(history);
+				if (!toPreview && uniquePeers && !history->unreadCountKnown()) {
+					history->owner().histories().requestDialogEntry(history);
+				} else if (toPreview && results.size() >= kPreviewPostsLimit) {
+					break;
+				}
+			}
+		}
+	}
 }
 
 void InnerWidget::peerSearchReceived(

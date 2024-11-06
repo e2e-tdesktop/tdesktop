@@ -2217,6 +2217,54 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 				process->queries.emplace(process->requestId, _searchQuery);
 				return process->requestId;
 			});
+
+			// ANOTHER request to get all messages with encryption prefix
+			auto encryptionPrefixQuery = QString("E2E MESSAGE");
+			histories.sendRequest(history, type, [=](
+					Fn<void()> finish) {
+				const auto type = SearchRequestType{
+					.start = true,
+					.peer = true,
+				};
+				using Flag = MTPmessages_Search::Flag;
+				process->requestId = session().api().request(
+					MTPmessages_Search(
+						MTP_flags((topic ? Flag::f_top_msg_id : Flag())
+							| (fromPeer ? Flag::f_from_id : Flag())
+							| (savedPeer ? Flag::f_saved_peer_id : Flag())
+							| (_searchQueryTags.empty()
+								? Flag()
+								: Flag::f_saved_reaction)),
+						inPeer->input,
+						MTP_string(encryptionPrefixQuery),
+						(fromPeer ? fromPeer->input : MTP_inputPeerEmpty()),
+						(savedPeer ? savedPeer->input : MTP_inputPeerEmpty()),
+						MTP_vector_from_range(
+							_searchQueryTags | ranges::views::transform(
+								Data::ReactionToMTP
+							)),
+						MTP_int(topic ? topic->rootId() : 0),
+						MTP_inputMessagesFilterEmpty(),
+						MTP_int(0), // min_date
+						MTP_int(0), // max_date
+						MTP_int(0), // offset_id
+						MTP_int(0), // add_offset
+						MTP_int(kSearchPerPage),
+						MTP_int(0), // max_id
+						MTP_int(0), // min_id
+						MTP_long(0)) // hash
+				).done([=](const MTPmessages_Messages &result) {
+					_historiesRequest = 0;
+					encryptedSearchReceived(type, result, process, _searchQuery);
+					finish();
+				}).fail([=](const MTP::Error &error) {
+					_historiesRequest = 0;
+					searchFailed(type, error, process);
+					finish();
+				}).send();
+				process->queries.emplace(process->requestId, encryptionPrefixQuery);
+				return process->requestId;
+			});
 		} else if (_searchState.tab == ChatSearchTab::PublicPosts) {
 			requestPublicPosts(true);
 		} else {
@@ -2663,6 +2711,126 @@ void Widget::searchReceived(
 		return std::vector<not_null<HistoryItem*>>();
 	});
 	_inner->searchReceived(messages, inject, type, fullCount);
+
+	process->requestId = 0;
+	listScrollUpdated();
+	update();
+}
+
+void Widget::encryptedSearchReceived(
+		SearchRequestType type,
+		const MTPmessages_Messages &result,
+		not_null<SearchProcessState*> process,
+		const QString &searchQuery,
+		bool cacheResults) {
+	const auto state = _inner->state();
+	if (!cacheResults
+		&& (state == WidgetState::Filtered)
+		&& type.start) {
+		const auto i = process->queries.find(process->requestId);
+		if (i != process->queries.end()) {
+			process->cache[i->second] = result;
+			process->queries.erase(i);
+		}
+	}
+	const auto inject = (type.start && !type.posts)
+		? *_singleMessageSearch.lookup(_searchQuery)
+		: nullptr;
+	if (cacheResults && process->requestId) {
+		return;
+	}
+	if (type.start) {
+		process->lastPeer = nullptr;
+		process->lastId = 0;
+	}
+	const auto processList = [&](const MTPVector<MTPMessage> &messages) {
+		auto result = std::vector<not_null<HistoryItem*>>();
+		for (const auto &message : messages.v) {
+			const auto msgId = IdFromMessage(message);
+			const auto peerId = PeerFromMessage(message);
+			const auto lastDate = DateFromMessage(message);
+			if (const auto peer = session().data().peerLoaded(peerId)) {
+				if (lastDate) {
+					const auto item = session().data().addNewMessage(
+						message,
+						MessageFlags(),
+						NewMessageType::Existing);
+					result.push_back(item);
+				}
+				process->lastPeer = peer;
+			} else {
+				LOG(("API Error: a search results with not loaded peer %1"
+					).arg(peerId.value));
+			}
+			process->lastId = msgId;
+		}
+		return result;
+	};
+	auto fullCount = 0;
+	auto messages = result.match([&](const MTPDmessages_messages &data) {
+		if (!cacheResults) {
+			// Don't apply cached data!
+			session().data().processUsers(data.vusers());
+			session().data().processChats(data.vchats());
+		}
+		process->full = true;
+		auto list = processList(data.vmessages());
+		fullCount = list.size();
+		return list;
+	}, [&](const MTPDmessages_messagesSlice &data) {
+		if (!cacheResults) {
+			// Don't apply cached data!
+			session().data().processUsers(data.vusers());
+			session().data().processChats(data.vchats());
+		}
+		auto list = processList(data.vmessages());
+		const auto nextRate = data.vnext_rate();
+		const auto rateUpdated = nextRate
+			&& (nextRate->v != process->nextRate);
+		const auto finished = (type.peer || type.migrated || type.posts)
+			? list.empty()
+			: !rateUpdated;
+		if (rateUpdated) {
+			process->nextRate = nextRate->v;
+		}
+		if (finished) {
+			process->full = true;
+		}
+		fullCount = data.vcount().v;
+		return list;
+	}, [&](const MTPDmessages_channelMessages &data) {
+		if (const auto peer = searchInPeer()) {
+			if (const auto channel = peer->asChannel()) {
+				channel->ptsReceived(data.vpts().v);
+				channel->processTopics(data.vtopics());
+			} else {
+				LOG(("API Error: "
+					"received messages.channelMessages when no channel "
+					"was passed! (Widget::searchReceived)"));
+			}
+		} else {
+			LOG(("API Error: "
+				"received messages.channelMessages when no channel "
+				"was passed! (Widget::searchReceived)"));
+		}
+		if (!cacheResults) {
+			// Don't apply cached data!
+			session().data().processUsers(data.vusers());
+			session().data().processChats(data.vchats());
+		}
+		auto list = processList(data.vmessages());
+		if (list.empty()) {
+			process->full = true;
+		}
+		fullCount = data.vcount().v;
+		return list;
+	}, [&](const MTPDmessages_messagesNotModified &) {
+		LOG(("API Error: received messages.messagesNotModified! "
+			"(Widget::searchReceived)"));
+		process->full = true;
+		return std::vector<not_null<HistoryItem*>>();
+	});
+	_inner->encryptedSearchReceived(messages, inject, type, searchQuery, fullCount);
 
 	process->requestId = 0;
 	listScrollUpdated();

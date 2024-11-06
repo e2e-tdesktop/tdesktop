@@ -4265,7 +4265,6 @@ inline static DH* dh1;
 inline static const BIGNUM *p1 = BN_new(), *q1 = BN_new(), *g1 = BN_new();
 inline static const BIGNUM *bn1;
 unsigned char* key2 = nullptr;
-DES_cblock *des_key2 = nullptr;
 
 char * init_DH() {
     dh1 = DH_new();
@@ -4350,7 +4349,6 @@ char * recvDH(const char * context) {
 
 
 static inline unsigned char* key1 = nullptr;
-static inline DES_cblock *des_key1;
 
 void finishDH(const char * context) {
     BIGNUM *bn2 = BN_new();
@@ -4437,7 +4435,7 @@ std::string decryptText(const char *encryptedText, DES_cblock* key) {
     return res;
 }
 
-std::string decryptTextByPeer(Data::EncryptSettings &keys, PeerId peerId, const std::string &hexedText){
+std::string decryptTextByPeer(Data::EncryptSettings &keys, PeerId peerId, std::string hexedText){
     auto keyOpt = keys.requestKey(peerId);
     if (keyOpt.has_value()) {
         auto key = keyOpt.value();

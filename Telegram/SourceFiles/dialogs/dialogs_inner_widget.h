@@ -113,6 +113,12 @@ public:
 		HistoryItem *inject,
 		SearchRequestType type,
 		int fullCount);
+	void encryptedSearchReceived(
+		std::vector<not_null<HistoryItem*>> result,
+		HistoryItem *inject,
+		SearchRequestType type,
+		const QString &searchQuery,
+		int fullCount);
 	void peerSearchReceived(
 		const QString &query,
 		const QVector<MTPPeer> &my,

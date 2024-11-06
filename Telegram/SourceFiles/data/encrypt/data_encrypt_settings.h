@@ -9,6 +9,7 @@ namespace Data {
     class Session;
 
     class EncryptSettings {
+        // Note: this will be created at .local/share/TelegramDesktop/tg-secret.txt in Ubuntu
         const std::string secret_file = "tg-secret.txt";
         std::unordered_map<PeerId, std::string> secrets;
         const not_null<Session*> _owner;
