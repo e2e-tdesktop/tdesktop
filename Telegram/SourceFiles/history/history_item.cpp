@@ -1936,6 +1936,9 @@ void HistoryItem::updateSentContent(
 	if (isEditingMedia()) {
 		return;
 	}
+    if (history()->peer->isEcnrypted()) {
+        return;
+    }
 	setText(textWithEntities);
 	if (_flags & MessageFlag::FromInlineBot) {
 		if (!media || !_media || !_media->updateInlineResultMedia(*media)) {
