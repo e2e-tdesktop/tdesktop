@@ -1517,7 +1517,7 @@ void PeerData::setEncryption(bool encryption) {
         auto action = Api::SendAction(history);
         auto message = Api::MessageToSend(action);
         if (encryption) {
-            message.textWithTags.text = QString("E2E INIT") + init_DH();
+            message.textWithTags.text = QString("E2E INIT ") + init_DH();
         } else {
             message.textWithTags.text = QString("stop encryption");
         }

@@ -79,6 +79,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/stories/info_stories_widget.h"
 #include "data/components/scheduled_messages.h"
 #include "data/notify/data_notify_settings.h"
+#include "data/encrypt/data_encrypt_settings.h"
 #include "data/data_changes.h"
 #include "data/data_session.h"
 #include "data/data_folder.h"
@@ -1100,6 +1101,7 @@ void Filler::addEncryptButton() {
     }
     const auto peer = _peer;
     const auto weak = base::make_weak(_thread);
+    //todo check here is chat already encrypted?
     if (!_peer->isEcnrypted()) {
         _addAction({
             .text = "Enable encrypt",
