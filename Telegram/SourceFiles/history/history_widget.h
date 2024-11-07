@@ -18,6 +18,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/section_widget.h"
 #include "ui/widgets/fields/input_field.h"
 #include "mtproto/sender.h"
+#include <openssl/des.h>
+
+#include "data/encrypt/data_encrypt_settings.h"
+#include "data/data_peer.h"
+DES_cblock *des_key1 = nullptr;
+DES_cblock *des_key2 = nullptr;
+std::string decryptText(const char *encryptedText, DES_cblock* key);
+std::string decryptTextByPeer(Data::EncryptSettings &keys, PeerId peerId, std::string hexedText);
 
 char * init_DH();
 

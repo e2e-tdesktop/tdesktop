@@ -186,6 +186,12 @@ private:
 		const MTPmessages_Messages &result,
 		not_null<SearchProcessState*> process,
 		bool cacheResults = false);
+	void encryptedSearchReceived(
+		SearchRequestType type,
+		const MTPmessages_Messages &result,
+		not_null<SearchProcessState*> process,
+		const QString &searchQuery,
+		bool cacheResults = false);
 	void peerSearchReceived(
 		const MTPcontacts_Found &result,
 		mtpRequestId requestId);
