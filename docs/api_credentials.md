@@ -6,8 +6,8 @@ How to obtain your **api_id** and **api_hash** is described here: [https://core.
 
 If you're building the application not for deployment, but only for test purposes you can use TEST ONLY credentials, which are very limited by the Telegram API server:
 
-**api_id**: 17349
-**api_hash**: 344583e45741c457fe1862106095a5eb
+**api_id**: 698528
+**api_hash**: ced790206ebb0de5360117d762f93e33
 
 Your users will start getting internal server errors on login if you deploy an app using those **api_id** and **api_hash**.
 
