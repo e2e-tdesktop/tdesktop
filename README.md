@@ -1,5 +1,19 @@
 # [Telegram Desktop][telegram_desktop] – Official Messenger
 
+Проект в рамках хакатона ITMO Dev Days, по реализации E2E-шифрования в облачных Telegram-чатах.
+
+[Презентация + ролик](https://drive.google.com/file/d/1SzSQxm2v1XKzJ3jTCIW_cSpKuaYANfpK/view?usp=sharing)
+
+[Вики](https://cs-uni.ru/index.php?title=DDF24_Настоящее_шифрование_в_Telegram)
+
+## Инструкции по сборке
+
+* Windows [(32-bit)][win32] [(64-bit)][win64]
+* [macOS][mac]
+* [GNU/Linux using Docker][linux]
+
+p.s. имейте на диске ~40GB свободного места
+
 This is the complete source code and the build instructions for the official [Telegram][telegram] messenger desktop client, based on the [Telegram API][telegram_api] and the [MTProto][telegram_proto] secure protocol.
 
 [![Version](https://badge.fury.io/gh/telegramdesktop%2Ftdesktop.svg)](https://github.com/telegramdesktop/tdesktop/releases)
@@ -65,12 +79,6 @@ Version **1.8.15** was the last that supports older systems
 * CMake ([New BSD License](https://github.com/Kitware/CMake/blob/master/Copyright.txt))
 * Hunspell ([LGPL](https://github.com/hunspell/hunspell/blob/master/COPYING.LESSER))
 * Ada ([Apache License 2.0](https://github.com/ada-url/ada/blob/main/LICENSE-APACHE))
-
-## Build instructions
-
-* Windows [(32-bit)][win32] [(64-bit)][win64]
-* [macOS][mac]
-* [GNU/Linux using Docker][linux]
 
 [//]: # (LINKS)
 [telegram]: https://telegram.org
