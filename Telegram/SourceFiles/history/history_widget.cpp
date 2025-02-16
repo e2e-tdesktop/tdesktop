@@ -6746,7 +6746,7 @@ void HistoryWidget::startItemRevealAnimations() {
                     keys.storeKey(peer, bytesToHex(reinterpret_cast<char*>(des_key2), sizeof(DES_cblock)));
                     
                     view->textItem()->setText(TextWithEntities::Simple("RECV" + view->textItem()->originalText().text));
-                    view->textItem()->setText(TextWithEntities::Simple("Init encrypting"));
+                    view->textItem()->setText(TextWithEntities::Simple("Начало обмена ключами шифования"));
                     this->customSend({}, answer_prefix + init_answer);
                 } else if (view->textItem()->originalText().text.startsWith(QString::fromStdString( answer_prefix))) {
                     std::string text = view->textItem()->originalText().text.mid(answer_prefix.size()).toStdString();
@@ -6767,6 +6767,10 @@ void HistoryWidget::startItemRevealAnimations() {
                 } else {
                     view->textItem()->setText(TextWithEntities::Simple("DECRYPTION FAIL " + view->textItem()->originalText().text));
                 }
+            } else if (view->isSelfMessage() && view->textItem()->originalText().text.startsWith(QString::fromStdString( init_prefix))) {
+                view->textItem()->setText(TextWithEntities::Simple("Начат обмен ключами"));
+            } else if (view->isSelfMessage() && view->textItem()->originalText().text.startsWith(QString::fromStdString( answer_prefix))) {
+                view->textItem()->setText(TextWithEntities::Simple("Чат зашифрован ✅"));
             }
 			if (const auto top = _list->itemTop(view); top >= 0) {
 				if (const auto height = view->height()) {
